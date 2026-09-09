@@ -1,0 +1,29 @@
+Origin: VCam Native
+Label: VCam native VideoToolbox experiment
+Suite: stable
+Version: 0.0.109-webrtc-viewport
+Codename: vcam-native
+Architectures: iphoneos-arm iphoneos-arm64 iphoneos-arm64e
+Components: main
+Description: Experimental VCam WebRTC viewport repository (explicit opt-in)
+Date: Wed, 09 Sep 2026 15:39:22 +0000
+MD5Sum:
+ 8e79463250aefc06d7e207b557b7a075             2146 Packages
+ dc8393293b3fec6649d5121d83a6116a              996 Packages.bz2
+ 3fcc284c5f38d8e197cfa365f0c486f0              877 Packages.gz
+ 8d09fb22efefe85fa2f2a62b9bc80748              900 Packages.xz
+SHA1:
+ d90816904d47023ce1e65d27a658c74063322aec             2146 Packages
+ 74fc984de30e746bace91717ee16b25af96146ef              996 Packages.bz2
+ 69fb8913f46a74186be292849d7d92d25e18cd2d              877 Packages.gz
+ 3b6b18b3907a566ad09248a3770faf65601f8c4e              900 Packages.xz
+SHA256:
+ b1c63ff72114405ca448a042615444a54310a91c3be2f6507d370584b95aa5b1             2146 Packages
+ f19f0b79537f5c5e3d81fe15590d7e4d565bb0b0bd21180efd49ca0b3f1d750e              996 Packages.bz2
+ 1d37262e3bab1967802b9570735ecee7faff41840836b988ebe3b80df984b957              877 Packages.gz
+ b2b170da62b47c9f96b69175fa4799fd8bf6afe537878d5930450d068bd8ead7              900 Packages.xz
+SHA512:
+ 339ea2cb8a493cfe484a300aa5abd43b91951304c242c271f1c2cb7b706753fa77c28d945f3de8b2ed9d68da9f9e0fc9d51b45e6f839d64ce22ff4c7f1574250             2146 Packages
+ 741d771a3bceb8639af6f0f763644523eec088d269b937bc2044f57a3f415abc4dc8e38b3d1db4d81e775761c3f1335c839c87a33f24134d5c6f6e71cf4e629f              996 Packages.bz2
+ c83eaa38ceb509089bb3a5c41af4844ac84e86fd16f33a40c857d0697ec55a0a7a1c2e3e825f862eaaedf740d51ff090653d97ba67ac93c60c7541cbbddd1980              877 Packages.gz
+ 5abcdfdedbf68a4cf9e3216818bffcd7f268a965b1968ea3ac076f9ab692568f920d29063f52ac79e7994e86d082b9a8dc4d551895bfbea368ee92920ed07537              900 Packages.xz

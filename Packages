@@ -1,0 +1,51 @@
+Package: com.yourcompany.vcam
+Architecture: iphoneos-arm
+Version: 0.0.109-webrtc-viewport
+Section: Tweaks
+Maintainer: vinhnv2507
+Installed-Size: 400
+Depends: mobilesubstrate, ffmpeg
+Filename: ./com.yourcompany.vcam_0.0.109-webrtc-viewport_iphoneos-arm.deb
+Size: 95434
+MD5sum: bb9f12d7c474f04e8c3fea96c1a2bbe8
+SHA1: e2bf648bb3af58966e37bc2f41be2e121f211d02
+SHA256: 4707743fcd303029f632898f9537dfd8e234cc1bd4bb07862cc86749b81e0f42
+SHA512: 0460484d62679e3133416a143650cbe624eae2d4f3a991a71893b8b38c84f06ded6a36ecb87288447dda57fae471bc2f8f5a53f037d33ce70b61ef462bd7f306
+Description: Virtual camera replacement with image and video picker for rootful, rootless and RootHide jailbreaks.
+Name: vcam
+Author: vinhnv2507
+
+Package: com.yourcompany.vcam
+Architecture: iphoneos-arm64
+Version: 0.0.109-webrtc-viewport
+Section: Tweaks
+Maintainer: vinhnv2507
+Installed-Size: 400
+Depends: mobilesubstrate, ffmpeg
+Filename: ./com.yourcompany.vcam_0.0.109-webrtc-viewport_iphoneos-arm64.deb
+Size: 95670
+MD5sum: 9f19148853c80ea950e8a7965c619817
+SHA1: 67f9b5af211985c963e05f9e6dbce00f1ee96c14
+SHA256: 8b8dd40fed4d753196406e8a52aaefb3fa383c43611f2964c1b3eedb0f100306
+SHA512: f194fea3ad6ddb20fdd620456894e75f26b8426ac95d36e85c2a145d3b70656ddc4d1c5db02cfca3d8b30c79e7959bc12ba0b4e9c9a5241de814b69a197d970a
+Description: Virtual camera replacement with image and video picker for rootful, rootless and RootHide jailbreaks.
+Name: vcam
+Author: vinhnv2507
+
+Package: com.yourcompany.vcam
+Architecture: iphoneos-arm64e
+Version: 0.0.109-webrtc-viewport
+Section: Tweaks
+Maintainer: vinhnv2507
+Installed-Size: 396
+Depends: mobilesubstrate, ffmpeg
+Filename: ./com.yourcompany.vcam_0.0.109-webrtc-viewport_iphoneos-arm64e.deb
+Size: 95354
+MD5sum: 833f2e91ebf0c1e2313c0cb17c526e0f
+SHA1: 189f2252c7a9ae22928bf13416b7271d66de671b
+SHA256: e5fd198086aa383171dc54ef31fa6de7d22dab3bae7a1eac66fdd3c097f587a2
+SHA512: 6288be277468bdbd50666ed079c727231fdbf64bf379a6e042b89ad2a8cbd3dca6d323f3270252962fbe855cb6572804b04345c5ec257ccd71ecbb436d508242
+Description: Virtual camera replacement with image and video picker for rootful, rootless and RootHide jailbreaks.
+Name: vcam
+Author: vinhnv2507
+
