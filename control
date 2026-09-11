@@ -1,6 +1,6 @@
 Package: com.yourcompany.vcam
 Name: vcam
-Version: 0.0.110-webrtc-only
+Version: 0.0.111
 Architecture: iphoneos-arm
 Description: Virtual camera replacement with image and video picker for rootful, rootless and RootHide jailbreaks.
 Maintainer: vinhnv2507

@@ -34,29 +34,99 @@ static NSString *const VCamPreferencesNotification = @"com.yourcompany.vcam.pref
 @end
 
 @interface VCamPassThroughWindow : UIWindow
+@property(nonatomic, assign) BOOL vcamAllowBecomeKey;
+- (void)vcamResignKeyIfNeeded;
+@end
+
+@interface VCamPassThroughWindow ()
+- (BOOL)vcamShouldHandlePoint:(CGPoint)point withEvent:(UIEvent *)event;
 @end
 
 @implementation VCamPassThroughWindow
+- (BOOL)canBecomeKeyWindow {
+    // Tapping the floating button must not steal SpringBoard's key window.
+    // If this overlay stays key, later hits that miss the button are dropped
+    // and the rest of the phone appears frozen until the next app switch.
+    return self.vcamAllowBecomeKey || self.rootViewController.presentedViewController != nil;
+}
+
+- (BOOL)vcamShouldHandlePoint:(CGPoint)point withEvent:(UIEvent *)event {
+    if (self.rootViewController.presentedViewController != nil) return YES;
+    UIViewController *controller = self.rootViewController;
+    if (!controller || controller.view.hidden || controller.view.alpha < 0.01) return NO;
+
+    UIButton *floatingButton = [controller valueForKey:@"floatingButton"];
+    UIView *panel = [controller valueForKey:@"panel"];
+    if ([floatingButton isKindOfClass:[UIButton class]] && !floatingButton.hidden && floatingButton.alpha > 0.01) {
+        CGPoint inButton = [self convertPoint:point toView:floatingButton];
+        if ([floatingButton pointInside:inButton withEvent:event]) return YES;
+        if (floatingButton.isTracking) return YES;
+        for (UIGestureRecognizer *gesture in floatingButton.gestureRecognizers) {
+            UIGestureRecognizerState state = gesture.state;
+            if (state == UIGestureRecognizerStateBegan || state == UIGestureRecognizerStateChanged) {
+                return YES;
+            }
+        }
+    }
+    if ([panel isKindOfClass:[UIView class]] && !panel.hidden && panel.alpha > 0.01) {
+        CGPoint inPanel = [self convertPoint:point toView:panel];
+        if ([panel pointInside:inPanel withEvent:event]) return YES;
+    }
+    return NO;
+}
+
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    // BackBoard uses pointInside, not hitTest, to choose the frontmost window.
+    // The default full-screen YES swallows every touch on the device even when
+    // hitTest later returns nil.
+    return [self vcamShouldHandlePoint:point withEvent:event];
+}
+
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    if (![self vcamShouldHandlePoint:point withEvent:event]) return nil;
     UIView *hit = [super hitTest:point withEvent:event];
-    if (!hit || hit == self.rootViewController.view) return nil;
-    // UIAlertController is presented by the overlay for live-link entry.
-    // Its private button views are not guaranteed to subclass UIControl, so
-    // the strict pass-through filter below would make only the text field
-    // clickable. A presented alert is modal and must receive all its touches.
     if (self.rootViewController.presentedViewController != nil) return hit;
+    UIView *panel = [self.rootViewController valueForKey:@"panel"];
+    if (!hit || hit == self || hit == self.rootViewController.view) {
+        if ([panel isKindOfClass:[UIView class]] && !panel.hidden) {
+            CGPoint inPanel = [self convertPoint:point toView:panel];
+            if ([panel pointInside:inPanel withEvent:event]) return panel;
+        }
+        return nil;
+    }
     UIView *cursor = hit;
     while (cursor && cursor != self.rootViewController.view) {
         if ([cursor isKindOfClass:[UIControl class]] ||
             [cursor isKindOfClass:[VCamControlPanel class]]) return hit;
         cursor = cursor.superview;
     }
+    if ([panel isKindOfClass:[UIView class]] && !panel.hidden && [hit isDescendantOfView:panel]) {
+        return hit;
+    }
     return nil;
+}
+
+- (void)vcamResignKeyIfNeeded {
+    if (!self.isKeyWindow) return;
+    if (self.vcamAllowBecomeKey || self.rootViewController.presentedViewController != nil) return;
+    UIWindow *best = nil;
+    NSArray<UIWindow *> *windows = self.windowScene.windows ?: [UIApplication sharedApplication].windows;
+    for (UIWindow *window in windows) {
+        if (window == self || window.hidden || window.alpha < 0.01) continue;
+        if (window.windowLevel > UIWindowLevelStatusBar) continue;
+        if (!best || window.windowLevel >= best.windowLevel) best = window;
+        if (window.windowLevel == UIWindowLevelNormal && [window canBecomeKeyWindow]) {
+            best = window;
+            break;
+        }
+    }
+    [best makeKeyWindow];
 }
 @end
 
 @interface VCamOverlayController : UIViewController <AVPlayerItemOutputPullDelegate>
 @property(nonatomic, strong) UIButton *floatingButton;
+@property(nonatomic, assign) BOOL floatingButtonDidDrag;
 @property(nonatomic, strong) UIView *panel;
 @property(nonatomic, strong) UILabel *sourceStatusLabel;
 @property(nonatomic, strong) UISwitch *enabledSwitch;
@@ -143,6 +213,7 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     [self.floatingButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     self.floatingButton.titleLabel.font = [UIFont boldSystemFontOfSize:14.0];
     [self.floatingButton addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
+    self.floatingButton.exclusiveTouch = YES;
     UIPanGestureRecognizer *drag = [[UIPanGestureRecognizer alloc]
         initWithTarget:self action:@selector(dragButton:)];
     drag.cancelsTouchesInView = NO;
@@ -291,6 +362,10 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     BOOL enabled = enabledValue == nil ? YES : [enabledValue boolValue];
     self.enabledSwitch.on = enabled;
     self.view.hidden = !enabled;
+    self.view.userInteractionEnabled = enabled;
+    if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+        self.view.window.userInteractionEnabled = enabled;
+    }
     if (!enabled) {
         self.panel.hidden = YES;
         [self.remoteTimer invalidate];
@@ -339,7 +414,10 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
         // The source may be 30 FPS, but the iPhone 7 Plus has to decode the
         // H.264 stream and mediaserverd then consumes the generated JPEG. A
         BOOL videoMode = [mode isEqualToString:@"video"] || [mode isEqualToString:@"native"] || [mode isEqualToString:@"web"];
-        NSTimeInterval interval = videoMode ? (1.0 / 24.0) : 1.0;
+        // WebRTC already has a display-link capturer. This timer is only a
+        // stalled-stream watchdog; running it at 24 Hz on SpringBoard main
+        // thread made the floating button hitch and freeze other touches.
+        NSTimeInterval interval = [mode isEqualToString:@"web"] ? 2.0 : (videoMode ? (1.0 / 24.0) : 1.0);
         self.sourceStatusLabel.text = [mode isEqualToString:@"native"]
             ? @"Video native (thử nghiệm)" : (videoMode
                 ? @"Video live độ trễ thấp" : @"Nguồn ảnh live cập nhật mỗi giây");
@@ -690,7 +768,8 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     // Do not make the WebView transparent. WKWebView snapshots preserve the
     // view's alpha, so the previous 0.01 value produced an almost-black
     // camera frame even though WebRTC was connected. The view remains fully
-    // off-screen and cannot cover the user's UI.
+    // off-screen and cannot cover the user's UI. Overlay pointInside only
+    // claims the floating button and panel, so this WebView cannot steal touches.
     web.alpha = 1.0;
     web.userInteractionEnabled = NO;
     [self.view addSubview:web];
@@ -707,7 +786,9 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     // Ask WebKit for a 30 FPS cadence, but keep the single-flight guard
     // below so a slow snapshot never creates a backlog of old frames.
     self.webCaptureDisplayLink.preferredFramesPerSecond = 30;
-    [self.webCaptureDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    // Default mode only: CommonModes also runs during touch tracking and
+    // would stall SpringBoard while the user drags the floating button.
+    [self.webCaptureDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
     NSMutableDictionary *preferences = [[self mainPreferences] mutableCopy];
     preferences[@"enabled"] = @YES;
     preferences[@"mediaPath"] = [VCamSharedDirectory() stringByAppendingPathComponent:@"media-live.jpg"];
@@ -780,7 +861,7 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     self.nativeLastItemTime = kCMTimeInvalid;
     self.nativeDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(nativeDisplayTick:)];
     self.nativeDisplayLink.preferredFramesPerSecond = 30;
-    [self.nativeDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    [self.nativeDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
     player.automaticallyWaitsToMinimizeStalling = NO;
     [player play];
     player.rate = 1.0;
@@ -1080,13 +1161,47 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     return label;
 }
 
+- (void)presentViewController:(UIViewController *)viewControllerToPresent animated:(BOOL)flag completion:(void (^)(void))completion {
+    if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+        VCamPassThroughWindow *window = (VCamPassThroughWindow *)self.view.window;
+        window.vcamAllowBecomeKey = YES;
+        [window makeKeyWindow];
+    }
+    [super presentViewController:viewControllerToPresent animated:flag completion:completion];
+}
+
+- (void)dismissViewControllerAnimated:(BOOL)flag completion:(void (^)(void))completion {
+    [super dismissViewControllerAnimated:flag completion:^{
+        if (completion) completion();
+        if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+            VCamPassThroughWindow *window = (VCamPassThroughWindow *)self.view.window;
+            window.vcamAllowBecomeKey = NO;
+            [window vcamResignKeyIfNeeded];
+        }
+    }];
+}
+
 - (void)togglePanel {
+    if (self.floatingButtonDidDrag) {
+        self.floatingButtonDidDrag = NO;
+        if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+            [(VCamPassThroughWindow *)self.view.window vcamResignKeyIfNeeded];
+        }
+        return;
+    }
     self.panel.hidden = !self.panel.hidden;
     [self.view bringSubviewToFront:self.floatingButton];
+    if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+        [(VCamPassThroughWindow *)self.view.window vcamResignKeyIfNeeded];
+    }
 }
 
 - (void)dragButton:(UIPanGestureRecognizer *)gesture {
     CGPoint translation = [gesture translationInView:self.view];
+    if (gesture.state == UIGestureRecognizerStateBegan ||
+        gesture.state == UIGestureRecognizerStateChanged) {
+        self.floatingButtonDidDrag = YES;
+    }
     CGPoint center = self.floatingButton.center;
     center.x += translation.x;
     center.y += translation.y;
@@ -1095,6 +1210,13 @@ static void VCamPreferencesDidChange(CFNotificationCenterRef center, void *obser
     center.y = MAX(radius + 30.0, MIN(CGRectGetHeight(self.view.bounds) - radius - 24.0, center.y));
     self.floatingButton.center = center;
     [gesture setTranslation:CGPointZero inView:self.view];
+    if (gesture.state == UIGestureRecognizerStateEnded ||
+        gesture.state == UIGestureRecognizerStateCancelled ||
+        gesture.state == UIGestureRecognizerStateFailed) {
+        if ([self.view.window isKindOfClass:[VCamPassThroughWindow class]]) {
+            [(VCamPassThroughWindow *)self.view.window vcamResignKeyIfNeeded];
+        }
+    }
 }
 
 - (NSMutableDictionary *)preferences {
@@ -1178,6 +1300,7 @@ static void VCamShowOverlay(void) {
             vcamOverlayWindow.rootViewController = [[VCamOverlayController alloc] init];
             vcamOverlayWindow.windowLevel = UIWindowLevelAlert + 100.0;
             vcamOverlayWindow.backgroundColor = [UIColor clearColor];
+            vcamOverlayWindow.opaque = NO;
         }
         vcamOverlayWindow.hidden = NO;
     });
