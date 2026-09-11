@@ -110,7 +110,16 @@ static NSString *const VCamPreferencesNotification = @"com.yourcompany.vcam.pref
     if (!self.isKeyWindow) return;
     if (self.vcamAllowBecomeKey || self.rootViewController.presentedViewController != nil) return;
     UIWindow *best = nil;
-    NSArray<UIWindow *> *windows = self.windowScene.windows ?: [UIApplication sharedApplication].windows;
+    NSMutableArray<UIWindow *> *windows = [NSMutableArray array];
+    if (self.windowScene) {
+        [windows addObjectsFromArray:self.windowScene.windows];
+    } else {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                [windows addObjectsFromArray:((UIWindowScene *)scene).windows];
+            }
+        }
+    }
     for (UIWindow *window in windows) {
         if (window == self || window.hidden || window.alpha < 0.01) continue;
         if (window.windowLevel > UIWindowLevelStatusBar) continue;
