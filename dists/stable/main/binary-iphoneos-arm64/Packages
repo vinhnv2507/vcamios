@@ -1,0 +1,16 @@
+Package: com.yourcompany.vcam
+Architecture: iphoneos-arm64
+Version: 0.0.114
+Section: Tweaks
+Maintainer: vinhnv2507
+Installed-Size: 416
+Depends: mobilesubstrate, ffmpeg
+Filename: ./com.yourcompany.vcam_0.0.114_iphoneos-arm64.deb
+Size: 99488
+MD5sum: 442a4b7e4ca3db617678e28f24cef956
+SHA1: 242777d3ceb85a73f6faec6957acee248809a7af
+SHA256: 628f18cb458c38deda3e23b69a35cdd6409cec2fe19accc76735c77d237d78b4
+SHA512: 1024a8bd7cb5b0ac82b6480796cda0afd5e240a938ed3945f432bb025165920a6888beff354fd068bc4f967cb568c172650aac5996c8cd4b1b8c6f89d6571866
+Description: Virtual camera replacement with image and video picker for rootful, rootless and RootHide jailbreaks.
+Name: vcam
+Author: vinhnv2507
