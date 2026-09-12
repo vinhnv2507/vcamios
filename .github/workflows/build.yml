@@ -133,6 +133,7 @@ jobs:
           sudo apt-get install -y apt-utils dpkg-dev
           mkdir -p apt-repo
           cp built-packages/*.deb apt-repo/
+          touch apt-repo/.nojekyll
           repo_deb="$(find apt-repo -maxdepth 1 -name '*.deb' -print -quit)"
           repo_version="$(dpkg-deb --field "$repo_deb" Version)"
           cd apt-repo
@@ -140,6 +141,27 @@ jobs:
           gzip -9c Packages > Packages.gz
           bzip2 -9c Packages > Packages.bz2
           xz -9c Packages > Packages.xz
+          python3 - <<'PY'
+          from pathlib import Path
+          import gzip, bz2, lzma
+          raw = Path("Packages").read_text()
+          records = [r.strip() for r in raw.split("\n\n") if r.strip()]
+          by_arch = {}
+          for rec in records:
+              arch = next((line.split(": ", 1)[1].strip() for line in rec.splitlines() if line.startswith("Architecture: ")), None)
+              if not arch:
+                  continue
+              by_arch.setdefault(arch, []).append(rec)
+          for arch, recs in by_arch.items():
+              dest = Path("dists/stable/main/binary-%s" % arch)
+              dest.mkdir(parents=True, exist_ok=True)
+              body = "\n\n".join(recs) + "\n"
+              data = body.encode()
+              (dest / "Packages").write_text(body)
+              (dest / "Packages.gz").write_bytes(gzip.compress(data, 9))
+              (dest / "Packages.bz2").write_bytes(bz2.compress(data, 9))
+              (dest / "Packages.xz").write_bytes(lzma.compress(data))
+          PY
           cd ..
           release_checksums="$(mktemp)"
           (cd apt-repo && apt-ftparchive release .) > "$release_checksums"
@@ -154,6 +176,8 @@ jobs:
             echo "Description: VCam repository for rootful, rootless and RootHide jailbreaks"
             cat "$release_checksums"
           } > apt-repo/Release
+          mkdir -p apt-repo/dists/stable
+          cp apt-repo/Release apt-repo/dists/stable/Release
           rm -f "$release_checksums"
 
       - name: Publish APT repository branch
